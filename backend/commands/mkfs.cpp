@@ -16,6 +16,15 @@ std::string cmdMkfs(const std::map<std::string,std::string>& p) {
         return "ERROR: falta -id";
     std::string id = p.at("id");
 
+    // ── Leer parámetro -fs (opcional, default ext2) ───────────
+    std::string fs = "2fs";
+    if (p.find("fs") != p.end()) {
+        fs = p.at("fs");
+        if (fs != "2fs" && fs != "3fs")
+            return "ERROR: -fs solo acepta '2fs' o '3fs'";
+    }
+    bool isExt3 = (fs == "3fs");
+
     // ── Buscar partición montada ──────────────────────────────
     if (mountedPartitions.find(id) == mountedPartitions.end())
         return "ERROR: no existe partición montada con id: " + id;
@@ -53,41 +62,68 @@ std::string cmdMkfs(const std::map<std::string,std::string>& p) {
     }
 
     // ── Calcular n (número de inodos) ─────────────────────────
-    // partSize = sizeof(Superblock) + n + 3n + n*sizeof(Inode) + 3n*sizeof(FolderBlock)
-    // n = floor(partSize - sizeof(Superblock)) / (4 + sizeof(Inode) + 3*sizeof(FolderBlock))
-    int sb_s     = sizeof(Superblock);
-    int inode_s  = sizeof(Inode);
-    int block_s  = sizeof(FolderBlock); // 64 bytes
-    int n = (partSize - sb_s) / (4 + inode_s + 3 * block_s);
+    int sb_s      = sizeof(Superblock);
+    int inode_s   = sizeof(Inode);
+    int block_s   = sizeof(FolderBlock);
+    int journal_s = sizeof(Journal);
+
+    int n;
+    if (isExt3) {
+        // EXT3: tamaño = sb + 50*journal + n + 3n + n*inode + 3n*block
+        n = (int)floor((double)(partSize - sb_s - 50 * journal_s)
+                       / (4 + inode_s + 3 * block_s));
+    } else {
+        // EXT2: tamaño = sb + n + 3n + n*inode + 3n*block
+        n = (int)floor((double)(partSize - sb_s)
+                       / (4 + inode_s + 3 * block_s));
+    }
 
     if (n <= 0) {
         file.close();
-        return "ERROR: partición demasiado pequeña para EXT2";
+        return "ERROR: partición demasiado pequeña para " + fs;
     }
 
     // ── Construir Superblock ──────────────────────────────────
     Superblock sb;
-    sb.s_filesystem_type   = 2;
+    sb.s_filesystem_type   = isExt3 ? 3 : 2;
     sb.s_inodes_count      = n;
     sb.s_blocks_count      = 3 * n;
-    sb.s_free_inodes_count = n - 1;      // root ocupa 1
-    sb.s_free_blocks_count = 3*n - 1;    // root ocupa 1
+    sb.s_free_inodes_count = n - 1;
+    sb.s_free_blocks_count = 3*n - 1;
     sb.s_mtime             = (int32_t)time(nullptr);
     sb.s_umtime            = 0;
     sb.s_mnt_count         = 1;
     sb.s_magic             = 0xEF53;
     sb.s_inode_s           = inode_s;
     sb.s_block_s           = block_s;
-    sb.s_bm_inode_start    = partStart + sb_s;
-    sb.s_bm_block_start    = sb.s_bm_inode_start + n;
-    sb.s_inode_start       = sb.s_bm_block_start + 3*n;
-    sb.s_block_start       = sb.s_inode_start + n * inode_s;
-    sb.s_firts_ino         = sb.s_inode_start + inode_s;  // segundo inodo
-    sb.s_first_blo         = sb.s_block_start + block_s;  // segundo bloque
+
+    // EXT3 inserta 50 journals entre el superblock y el bitmap de inodos
+    if (isExt3) {
+        sb.s_journal_start  = partStart + sb_s;
+        sb.s_bm_inode_start = sb.s_journal_start + 50 * journal_s;
+    } else {
+        sb.s_journal_start  = -1;
+        sb.s_bm_inode_start = partStart + sb_s;
+    }
+
+    sb.s_bm_block_start = sb.s_bm_inode_start + n;
+    sb.s_inode_start    = sb.s_bm_block_start + 3*n;
+    sb.s_block_start    = sb.s_inode_start + n * inode_s;
+    sb.s_firts_ino      = sb.s_inode_start + inode_s;
+    sb.s_first_blo      = sb.s_block_start + block_s;
 
     // ── Escribir Superblock ───────────────────────────────────
     file.seekp(partStart);
     file.write(reinterpret_cast<char*>(&sb), sizeof(Superblock));
+
+    // ── Escribir 50 journals vacíos (solo EXT3) ───────────────
+    if (isExt3) {
+        Journal emptyJournal;
+        for (int i = 0; i < 50; i++) {
+            file.seekp(sb.s_journal_start + i * journal_s);
+            file.write(reinterpret_cast<char*>(&emptyJournal), journal_s);
+        }
+    }
 
     // ── Escribir bitmaps (todo en 0) ──────────────────────────
     char zero = '0';
@@ -189,7 +225,7 @@ std::string cmdMkfs(const std::map<std::string,std::string>& p) {
 
     file.close();
 
-    return "SUCCESS: partición formateada como EXT2\n"
+    return "SUCCESS: partición formateada como " + fs + "\n"
            "  id            : " + id + "\n"
            "  inodos        : " + std::to_string(n) + "\n"
            "  bloques       : " + std::to_string(3*n) + "\n"

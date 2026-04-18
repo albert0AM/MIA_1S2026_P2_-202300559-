@@ -73,6 +73,167 @@ static int chooseSpace(std::vector<FreeSpace>& spaces, int needed, char fit) {
 
 std::string cmdFdisk(const std::map<std::string,std::string>& p) {
 
+    // ── Detectar operación especial: -delete o -add ───────────
+    bool hasDelete = (p.find("delete") != p.end());
+    bool hasAdd    = (p.find("add")    != p.end());
+
+    if (hasDelete || hasAdd) {
+        // Ambas requieren -path y -name
+        if (p.find("path") == p.end()) return "ERROR: falta -path";
+        if (p.find("name") == p.end()) return "ERROR: falta -name";
+
+        std::string path = expandPath(p.at("path"));
+        std::string name = p.at("name");
+
+        if (!fileExists(path))
+            return "ERROR: el disco no existe: " + path;
+
+        std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out);
+        if (!file.is_open())
+            return "ERROR: no se pudo abrir el disco: " + path;
+
+        MBR mbr;
+        file.seekg(0);
+        file.read(reinterpret_cast<char*>(&mbr), sizeof(MBR));
+
+        // ── Buscar la partición por nombre en MBR ─────────────
+        int slot = -1;
+        for (int i = 0; i < 4; i++) {
+            std::string pname(mbr.mbr_partitions[i].part_name, 16);
+            pname = pname.substr(0, pname.find('\0'));
+            if (pname == name) { slot = i; break; }
+        }
+
+        if (slot == -1) {
+            file.close();
+            return "ERROR: no existe partición con nombre: " + name;
+        }
+
+        // ════════════════════════════════════════════════════════
+        //  DELETE
+        // ════════════════════════════════════════════════════════
+        if (hasDelete) {
+            std::string mode = toLower(p.at("delete"));
+            if (mode != "fast" && mode != "full")
+                return "ERROR: -delete solo acepta 'fast' o 'full'";
+
+            int pStart = mbr.mbr_partitions[slot].part_start;
+            int pSize  = mbr.mbr_partitions[slot].part_s;
+            char pType = mbr.mbr_partitions[slot].part_type;
+
+            // Si es extendida, borrar también las lógicas (EBRs)
+            if (pType == 'E' && mode == "full") {
+                // Limpiar todo el espacio extendido con \0
+                std::vector<char> zeros(pSize, '\0');
+                file.seekp(pStart);
+                file.write(zeros.data(), pSize);
+            } else if (pType == 'E' && mode == "fast") {
+                // Solo limpiar el primer EBR
+                EBR emptyEBR;
+                memset(&emptyEBR, 0, sizeof(EBR));
+                emptyEBR.part_start = -1;
+                emptyEBR.part_s     = -1;
+                emptyEBR.part_next  = -1;
+                file.seekp(pStart);
+                file.write(reinterpret_cast<char*>(&emptyEBR), sizeof(EBR));
+            }
+
+            if (mode == "full") {
+                // Rellenar el espacio de la partición con \0
+                std::vector<char> zeros(pSize, '\0');
+                file.seekp(pStart);
+                file.write(zeros.data(), pSize);
+            }
+
+            // Limpiar entrada en MBR
+            mbr.mbr_partitions[slot].part_status      = '0';
+            mbr.mbr_partitions[slot].part_type        = '\0';
+            mbr.mbr_partitions[slot].part_fit         = '\0';
+            mbr.mbr_partitions[slot].part_start       = -1;
+            mbr.mbr_partitions[slot].part_s           = -1;
+            mbr.mbr_partitions[slot].part_correlative = -1;
+            memset(mbr.mbr_partitions[slot].part_name, 0, 16);
+            memset(mbr.mbr_partitions[slot].part_id,   0, 4);
+
+            file.seekp(0);
+            file.write(reinterpret_cast<char*>(&mbr), sizeof(MBR));
+            file.close();
+
+            return "SUCCESS: partición eliminada (" + mode + ")\n"
+                   "  nombre : " + name;
+        }
+
+        // ════════════════════════════════════════════════════════
+        //  ADD
+        // ════════════════════════════════════════════════════════
+        if (hasAdd) {
+            int addAmount = std::stoi(p.at("add"));
+
+            // -unit para add (default K)
+            char unit = 'K';
+            if (p.find("unit") != p.end()) {
+                std::string u = toLower(p.at("unit"));
+                if      (u == "b") unit = 'B';
+                else if (u == "k") unit = 'K';
+                else if (u == "m") unit = 'M';
+                else { file.close(); return "ERROR: -unit solo acepta B, K o M"; }
+            }
+
+            int addBytes;
+            if      (unit == 'B') addBytes = addAmount;
+            else if (unit == 'K') addBytes = addAmount * 1024;
+            else                  addBytes = addAmount * 1024 * 1024;
+
+            int currentSize  = mbr.mbr_partitions[slot].part_s;
+            int currentStart = mbr.mbr_partitions[slot].part_start;
+            int newSize      = currentSize + addBytes;
+
+            if (newSize <= 0) {
+                file.close();
+                return "ERROR: no se puede reducir la partición a tamaño negativo o cero";
+            }
+
+            if (addBytes > 0) {
+                // Verificar que hay espacio libre después de la partición
+                int endOfPart = currentStart + currentSize;
+                bool spaceAvailable = true;
+
+                for (int i = 0; i < 4; i++) {
+                    if (i == slot) continue;
+                    int otherStart = mbr.mbr_partitions[i].part_start;
+                    if (otherStart == -1) continue;
+                    // Otra partición empieza dentro del espacio que queremos agregar
+                    if (otherStart >= endOfPart && otherStart < endOfPart + addBytes) {
+                        spaceAvailable = false;
+                        break;
+                    }
+                }
+
+                if (endOfPart + addBytes > mbr.mbr_tamano)
+                    spaceAvailable = false;
+
+                if (!spaceAvailable) {
+                    file.close();
+                    return "ERROR: no hay espacio libre suficiente después de la partición";
+                }
+            }
+
+            mbr.mbr_partitions[slot].part_s = newSize;
+
+            file.seekp(0);
+            file.write(reinterpret_cast<char*>(&mbr), sizeof(MBR));
+            file.close();
+
+            std::string dir = (addBytes >= 0) ? "agregados" : "eliminados";
+            return "SUCCESS: espacio " + dir + " a partición\n"
+                   "  nombre       : " + name + "\n"
+                   "  tamaño nuevo : " + std::to_string(newSize) + " bytes";
+        }
+
+        file.close();
+        return "ERROR: operación no reconocida";
+    }
+
     // ── Validar parámetros ────────────────────────────────────
     if (p.find("size") == p.end())
         return "ERROR: falta -size";

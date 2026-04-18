@@ -109,3 +109,57 @@ std::string cmdMounted() {
     }
     return result;
 }
+
+std::string cmdUnmount(const std::map<std::string,std::string>& p) {
+
+    // ── Validar -id ───────────────────────────────────────────
+    if (p.find("id") == p.end())
+        return "ERROR: falta -id";
+    std::string id = p.at("id");
+
+    // ── Verificar que existe en memoria ───────────────────────
+    if (mountedPartitions.find(id) == mountedPartitions.end())
+        return "ERROR: no existe partición montada con id: " + id;
+
+    MountedPartition& mp = mountedPartitions[id];
+
+    // ── Abrir disco ───────────────────────────────────────────
+    std::fstream file(mp.path, std::ios::binary | std::ios::in | std::ios::out);
+    if (!file.is_open())
+        return "ERROR: no se pudo abrir el disco: " + mp.path;
+
+    // ── Leer MBR ──────────────────────────────────────────────
+    MBR mbr;
+    file.seekg(0);
+    file.read(reinterpret_cast<char*>(&mbr), sizeof(MBR));
+
+    // ── Buscar la partición por id en el MBR ─────────────────
+    int slot = -1;
+    for (int i = 0; i < 4; i++) {
+        std::string pid(mbr.mbr_partitions[i].part_id, 4);
+        pid = pid.substr(0, pid.find('\0'));
+        if (pid == id) { slot = i; break; }
+    }
+
+    if (slot == -1) {
+        file.close();
+        return "ERROR: no se encontró la partición en el disco para id: " + id;
+    }
+
+    // ── Resetear estado en disco ──────────────────────────────
+    mbr.mbr_partitions[slot].part_status      = '0';
+    mbr.mbr_partitions[slot].part_correlative = 0;   // vuelve a estado inicial
+    memset(mbr.mbr_partitions[slot].part_id, 0, 4);
+
+    file.seekp(0);
+    file.write(reinterpret_cast<char*>(&mbr), sizeof(MBR));
+    file.close();
+
+    // ── Eliminar de memoria ───────────────────────────────────
+    std::string name = mp.name;
+    mountedPartitions.erase(id);
+
+    return "SUCCESS: partición desmontada\n"
+           "  id     : " + id + "\n"
+           "  nombre : " + name;
+}

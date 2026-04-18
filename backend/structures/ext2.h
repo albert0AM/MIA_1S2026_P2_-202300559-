@@ -5,7 +5,7 @@
 #pragma pack(push, 1)
 
 struct Superblock {
-    int32_t s_filesystem_type;   // 2 = EXT2
+    int32_t s_filesystem_type;   // 2 = EXT2, 3 = EXT3
     int32_t s_inodes_count;
     int32_t s_blocks_count;
     int32_t s_free_inodes_count;
@@ -22,11 +22,13 @@ struct Superblock {
     int32_t s_bm_block_start;
     int32_t s_inode_start;
     int32_t s_block_start;
+    int32_t s_journal_start;     // inicio del área de journaling (-1 si EXT2)
 
     Superblock() {
         memset(this, 0, sizeof(Superblock));
         s_filesystem_type = 2;
         s_magic           = 0xEF53;
+        s_journal_start   = -1;
     }
 };
 
@@ -76,6 +78,29 @@ struct PointerBlock {
 
     PointerBlock() {
         for (int i = 0; i < 16; i++) b_pointers[i] = -1;
+    }
+};
+
+struct Information {
+    char  i_operation[10];
+    char  i_path[32];
+    char  i_content[64];
+    float i_date;
+
+    Information() {
+        memset(i_operation, 0, sizeof(i_operation));
+        memset(i_path,      0, sizeof(i_path));
+        memset(i_content,   0, sizeof(i_content));
+        i_date = 0.0f;
+    }
+};
+
+struct Journal {
+    int32_t     j_count;
+    Information j_content;
+
+    Journal() {
+        j_count = -1;
     }
 };
 

@@ -56,6 +56,8 @@ static std::string executeScript(const std::string& script) {
             result = cmdMount(params);
         else if (cmd == "mounted")
             result = cmdMounted();
+        else if (cmd == "unmount")
+            result = cmdUnmount(params);
         else if (cmd == "mkfs")
             result = cmdMkfs(params);
         else if (cmd == "login")
