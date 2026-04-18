@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<title>ExtreamFS</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: monospace;
+    font-size: 13px;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .container {
+    width: 780px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  /* ── barra superior ── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #1c2128;
+    border-bottom: 1px solid #30363d;
+  }
+
+  .toolbar button, .toolbar label {
+    padding: 5px 14px;
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    color: #c9d1d9;
+    font-family: monospace;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .toolbar button:hover, .toolbar label:hover {
+    background: #30363d;
+    border-color: #58a6ff;
+    color: #58a6ff;
+  }
+  .toolbar #btn-ejecutar {
+    background: #238636;
+    border-color: #2ea043;
+    color: #fff;
+    font-weight: bold;
+  }
+  .toolbar #btn-ejecutar:hover { background: #2ea043; }
+  .toolbar #btn-ejecutar:disabled { background: #1c2128; color: #484f58; border-color: #30363d; cursor: not-allowed; }
+
+  #file-input { display: none; }
+  #file-name  { font-size: 11px; color: #8b949e; }
+
+  /* ── paneles ── */
+  .panel { display: flex; flex-direction: column; }
+  .panel-label {
+    padding: 6px 14px;
+    font-size: 11px;
+    color: #8b949e;
+    background: #1c2128;
+    border-bottom: 1px solid #30363d;
+    border-top: 1px solid #30363d;
+  }
+
+  .editor {
+    display: flex;
+    height: 200px;
+    background: #0d1117;
+  }
+
+  .lines {
+    padding: 10px 8px 10px 10px;
+    background: #161b22;
+    color: #484f58;
+    text-align: right;
+    user-select: none;
+    border-right: 1px solid #30363d;
+    font-size: 12px;
+    line-height: 1.6;
+    min-width: 36px;
+    overflow: hidden;
+    white-space: pre;
+  }
+
+  textarea, #salida {
+    flex: 1;
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 10px;
+    border: none;
+    outline: none;
+    resize: none;
+    overflow-y: auto;
+  }
+
+  #salida {
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #8b949e;
+  }
+  #salida.ok  { color: #3fb950; }
+  #salida.err { color: #f85149; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- toolbar -->
+  <div class="toolbar">
+    <input id="file-input" type="file" accept=".smia,.txt"/>
+    <label for="file-input">Elegir archivo</label>
+    <span id="file-name">No se eligió archivo</span>
+    <button id="btn-ejecutar" onclick="ejecutar()">Ejecutar</button>
+    <button onclick="limpiar()">Limpiar</button>
+  </div>
+
+  <!-- entrada -->
+  <div class="panel">
+    <div class="panel-label">Entrada:</div>
+    <div class="editor">
+      <div class="lines" id="ln-entrada">1</div>
+      <textarea id="entrada" placeholder="# Escribe tus comandos aquí..." spellcheck="false"></textarea>
+    </div>
+  </div>
+
+  <!-- salida -->
+  <div class="panel">
+    <div class="panel-label">Salida:</div>
+    <div class="editor">
+      <div class="lines" id="ln-salida">1</div>
+      <div id="salida"># Acá se verán todos los mensajes de la ejecución</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const ta  = document.getElementById('entrada');
+const out = document.getElementById('salida');
+const lnE = document.getElementById('ln-entrada');
+const lnS = document.getElementById('ln-salida');
+
+// ── números de línea entrada ──────────────────────────────────
+function syncLines() {
+  const n = ta.value.split('\n').length;
+  lnE.textContent = Array.from({length: n}, (_, i) => i + 1).join('\n');
+  lnE.scrollTop   = ta.scrollTop;
+}
+ta.addEventListener('input',  syncLines);
+ta.addEventListener('scroll', () => { lnE.scrollTop = ta.scrollTop; });
+syncLines();
+
+// ── números de línea salida ───────────────────────────────────
+function syncSalidaLines(text) {
+  const n = text.split('\n').length;
+  lnS.textContent = Array.from({length: n}, (_, i) => i + 1).join('\n');
+}
+syncSalidaLines(out.textContent);
+
+// ── cargar archivo ────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  document.getElementById('file-name').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => { ta.value = e.target.result; syncLines(); };
+  reader.readAsText(file);
+  this.value = '';
+});
+
+// ── ejecutar ──────────────────────────────────────────────────
+async function ejecutar() {
+  const script = ta.value.trim();
+  if (!script) return;
+
+  const btn = document.getElementById('btn-ejecutar');
+  btn.disabled    = true;
+  btn.textContent = 'Ejecutando...';
+
+  try {
+    const res  = await fetch('/execute', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ commands: ta.value })
+    });
+    const data = await res.json();
+    const texto = data.output.trim();
+    const ok    = texto.includes('SUCCESS');
+
+    out.textContent = texto;
+    out.className   = ok ? 'ok' : 'err';
+    syncSalidaLines(texto);
+  } catch(e) {
+    out.textContent = 'ERROR: no se pudo conectar con el servidor';
+    out.className   = 'err';
+    syncSalidaLines(out.textContent);
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Ejecutar';
+  }
+}
+
+// ── limpiar ───────────────────────────────────────────────────
+function limpiar() {
+  ta.value        = '';
+  out.textContent = '# Acá se verán todos los mensajes de la ejecución';
+  out.className   = '';
+  syncLines();
+  syncSalidaLines(out.textContent);
+}
+
+// ── Tab ───────────────────────────────────────────────────────
+ta.addEventListener('keydown', e => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const s = ta.selectionStart;
+    ta.value = ta.value.slice(0, s) + '  ' + ta.value.slice(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = s + 2;
+    syncLines();
+  }
+});
+</script>
+</body>
+</html>
