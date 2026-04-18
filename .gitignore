@@ -1,0 +1,33 @@
+//Ignorar Crow
+Vendor/
+
+//Ignorar archivos de configuración de Visual Studio Code
+.vscode/
+
+//Ignorar archivos de configuración de CMake
+CMakeLists.txt
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+//Ignorar archivos de configuración de Visual Studio
+CMakeFiles/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Discos temporales
+*.mia
+
+# Reportes temporales
+*.dot
+
+# VS Code
+.vscode/
+
+# Sistema
+.DS_Store
+
+#Json
+*.json
