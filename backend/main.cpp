@@ -11,6 +11,9 @@
 #include  "commands/mkdir.h"
 #include  "commands/mkfile.h"
 #include  "commands/cat.h"
+#include  "commandsP2/rename.h"
+#include  "commandsP2/remove.h"
+#include  "commandsP2/copy.h"
 #include "reports/rep.h"
 
 
@@ -84,6 +87,12 @@ static std::string executeScript(const std::string& script) {
             result = cmdCat(params);
         else if (cmd == "rep")
             result = cmdRep(params);
+        else if (cmd == "rename")
+            result = cmdRename(params);
+        else if (cmd == "remove")
+            result = cmdRemove(params);
+        else if (cmd == "copy")
+            result = cmdCopy(params);
         else
             result = "ERROR: comando no reconocido: " + cmd;
         output += result + "\n";
