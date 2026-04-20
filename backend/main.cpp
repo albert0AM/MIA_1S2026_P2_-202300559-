@@ -14,7 +14,11 @@
 #include  "commandsP2/rename.h"
 #include  "commandsP2/remove.h"
 #include  "commandsP2/copy.h"
+#include  "commandsP2/find.h"
+#include  "commandsP2/move.h"
+#include  "commandsP2/chown.h"
 #include "reports/rep.h"
+
 
 
 
@@ -93,6 +97,12 @@ static std::string executeScript(const std::string& script) {
             result = cmdRemove(params);
         else if (cmd == "copy")
             result = cmdCopy(params);
+        else if (cmd == "find") 
+            result = cmdFind(params);
+        else if (cmd == "move")
+            result = cmdMove(params);
+        else if (cmd == "chown")
+            result = cmdChown(params);
         else
             result = "ERROR: comando no reconocido: " + cmd;
         output += result + "\n";
