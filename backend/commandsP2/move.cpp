@@ -3,6 +3,7 @@
 #include "../structures/ext2.h"
 #include "../structures/globals.h"
 #include "../utils/utils.h"
+#include "../commandsP2/journal.h"
 
 #include <fstream>
 #include <cstring>
@@ -292,6 +293,9 @@ std::string cmdMove(const std::map<std::string,std::string>& p) {
 
     // 3. Si es carpeta, actualizar ".." para apuntar al nuevo padre
     updateDotDot(file, sb, srcTarget, destDirInode);
+
+    // Registrar en journal si es EXT3
+    writeJournal(file, sb, "move", destPath + "/" + srcName);
 
     file.close();
     return "SUCCESS: movido\n"

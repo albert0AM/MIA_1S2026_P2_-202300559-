@@ -17,12 +17,10 @@
 #include  "commandsP2/find.h"
 #include  "commandsP2/move.h"
 #include  "commandsP2/chown.h"
+#include   "commandsP2/chmod.h"
+#include  "commandsP2/journaling.h"
+#include  "commandsP2/loss.h"
 #include "reports/rep.h"
-
-
-
-
-
 #include <fstream>
 #include <sstream>
 
@@ -103,6 +101,12 @@ static std::string executeScript(const std::string& script) {
             result = cmdMove(params);
         else if (cmd == "chown")
             result = cmdChown(params);
+        else if (cmd == "chmod")
+            result = cmdChmod(params);
+         else if (cmd == "journaling")
+            result = cmdJournaling(params);
+         else if (cmd == "loss")
+            result = cmdLoss(params);
         else
             result = "ERROR: comando no reconocido: " + cmd;
         output += result + "\n";

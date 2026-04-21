@@ -3,6 +3,7 @@
 #include "../structures/ext2.h"
 #include "../structures/globals.h"
 #include "../utils/utils.h"
+#include "../commandsP2/journal.h"
 
 #include <fstream>
 #include <cstring>
@@ -212,6 +213,9 @@ std::string cmdChown(const std::map<std::string,std::string>& p) {
 
     // ── Aplicar chown ─────────────────────────────────────────
     applyChown(file, sb, targetInode, newUid, recursive, activeSession);
+
+    // Registrar en journal si es EXT3
+    writeJournal(file, sb, "chown", path);
 
     file.close();
 

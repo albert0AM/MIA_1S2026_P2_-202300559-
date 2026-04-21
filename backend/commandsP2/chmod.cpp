@@ -3,6 +3,7 @@
 #include "../structures/ext2.h"
 #include "../structures/globals.h"
 #include "../utils/utils.h"
+#include "../commands/journal.h"
 
 #include <fstream>
 #include <cstring>
@@ -181,6 +182,9 @@ std::string cmdChmod(const std::map<std::string,std::string>& p) {
 
     // ── Aplicar chmod ─────────────────────────────────────────
     applyChmod(file, sb, targetInode, newPerm, recursive, activeSession);
+
+    // Registrar en journal si es EXT3
+    writeJournal(file, sb, "chmod", path);
 
     file.close();
 

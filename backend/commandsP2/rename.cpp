@@ -3,6 +3,7 @@
 #include "../structures/ext2.h"
 #include "../structures/globals.h"
 #include "../utils/utils.h"
+#include "../commandsP2/journal.h"
 
 #include <fstream>
 #include <cstring>
@@ -187,6 +188,9 @@ std::string cmdRename(const std::map<std::string,std::string>& p) {
         file.close();
         return "ERROR: no se pudo renombrar la entrada en el directorio padre";
     }
+
+    // Registrar en journal si es EXT3
+    writeJournal(file, sb, "rename", path);
 
     file.close();
     return "SUCCESS: renombrado\n"

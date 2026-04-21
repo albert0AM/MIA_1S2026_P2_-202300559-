@@ -3,6 +3,7 @@
 #include "../structures/ext2.h"
 #include "../structures/globals.h"
 #include "../utils/utils.h"
+#include "../commandsP2/journal.h"
 
 #include <fstream>
 #include <cstring>
@@ -388,6 +389,9 @@ std::string cmdCopy(const std::map<std::string,std::string>& p) {
 
     // ── Actualizar superblock ─────────────────────────────────
     updateSuperblock(file, partStart, sb);
+
+    // Registrar en journal si es EXT3
+    writeJournal(file, sb, "copy", destPath + "/" + srcName);
 
     file.close();
     return "SUCCESS: copiado\n"
