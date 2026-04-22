@@ -8,6 +8,9 @@
         {{ loading ? 'Ejecutando...' : 'Ejecutar' }}
       </button>
       <button @click="clear">Limpiar</button>
+      <button v-if="!session.active" @click="goToLogin" class="btn-login">
+        Iniciar Sesión
+      </button>
       <div v-if="session.active" class="session-badge">
         ● {{ session.username }} — {{ session.partId }}
       </div>
@@ -41,8 +44,10 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
 
+const router   = useRouter()
 const input    = ref('')
 const output   = ref('# Acá se verán todos los mensajes de la ejecución')
 const loading  = ref(false)
@@ -136,6 +141,10 @@ function clear() {
   input.value  = ''
   output.value = '# Acá se verán todos los mensajes de la ejecución'
 }
+
+function goToLogin() {
+  router.push('/login')
+}
 </script>
 
 <style scoped>
@@ -171,6 +180,12 @@ function clear() {
 #btn-ejecutar {
   background: #238636;
   border-color: #2ea043;
+  color: #fff;
+}
+
+.btn-login {
+  background: #0969da;
+  border-color: #0860ca;
   color: #fff;
 }
 
