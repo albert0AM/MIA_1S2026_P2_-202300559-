@@ -228,15 +228,20 @@ int main() {
         return crow::response(200, r);
     });
 
-    // ── POST /execute — ejecuta comandos ──────────────────────
-    CROW_ROUTE(app, "/execute").methods(crow::HTTPMethod::POST)(
+    // ── POST /execute — ejecuta comandos (+ OPTIONS preflight) ───
+    CROW_ROUTE(app, "/execute").methods(crow::HTTPMethod::POST, crow::HTTPMethod::OPTIONS)(
     [](const crow::request& req) {
         crow::response res;
         res.add_header("Access-Control-Allow-Origin",  "*");
         res.add_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         res.add_header("Access-Control-Allow-Headers", "Content-Type");
-        res.add_header("Content-Type", "application/json");
 
+        if (req.method == crow::HTTPMethod::OPTIONS) {
+            res.code = 204;
+            return res;
+        }
+
+        res.add_header("Content-Type", "application/json");
         auto body = crow::json::load(req.body);
         if (!body || !body.has("commands")) {
             crow::json::wvalue e;
@@ -248,16 +253,6 @@ int main() {
         result["output"] = executeScript(body["commands"].s());
         res.code = 200;
         res.body = result.dump();
-        return res;
-    });
-
-    // ── OPTIONS /execute — preflight CORS ─────────────────────
-    CROW_ROUTE(app, "/execute").methods(crow::HTTPMethod::OPTIONS)(
-    [](const crow::request&) {
-        crow::response res(204);
-        res.add_header("Access-Control-Allow-Origin",  "*");
-        res.add_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        res.add_header("Access-Control-Allow-Headers", "Content-Type");
         return res;
     });
 
