@@ -104,7 +104,7 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    const cmd = `login -id=${form.value.partId} -usu=${form.value.username} -pas=${form.value.password}`
+    const cmd = `login -id=${form.value.partId} -user=${form.value.username} -pass=${form.value.password}`
     const res = await axios.post(`${BASE_URL}/execute`, { commands: cmd })
     const output = res.data.output || ''
 

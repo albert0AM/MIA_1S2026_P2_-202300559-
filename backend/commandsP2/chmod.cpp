@@ -3,7 +3,7 @@
 #include "../structures/ext2.h"
 #include "../structures/globals.h"
 #include "../utils/utils.h"
-#include "../commands/journal.h"
+#include "../commandsP2/journal.h"
 
 #include <fstream>
 #include <cstring>
