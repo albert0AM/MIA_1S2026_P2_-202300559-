@@ -48,6 +48,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import BASE_URL from './config.js'
 
 const router   = useRouter()
 const input    = ref('')
@@ -135,7 +136,7 @@ async function execute() {
 
   loading.value = true
   try {
-    const res = await axios.post('/execute', { commands: input.value })
+    const res = await axios.post(`${BASE_URL}/execute`, { commands: input.value })
     output.value = res.data.output.trim()
     detectSession(output.value)
   } catch (e) {
@@ -173,7 +174,7 @@ function goToExplorer() {
 
 async function doLogout() {
   try {
-    await axios.post('/execute', { commands: 'logout' })
+    await axios.post(`${BASE_URL}/execute`, { commands: 'logout' })
   } catch { /* ignorar error de red */ }
   session.value = { active: false, username: '', partId: '' }
   localStorage.removeItem('session')
