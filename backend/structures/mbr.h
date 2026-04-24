@@ -29,7 +29,7 @@ struct Partition {
 
 struct MBR {
     int32_t   mbr_tamano;
-    char      mbr_fecha_creacion[20];
+    char      mbr_fecha_creacion[16];
     int32_t   mbr_dsk_signature;
     char      dsk_fit;
     Partition mbr_partitions[4];
@@ -38,7 +38,7 @@ struct MBR {
         mbr_tamano         = 0;
         time_t now = time(nullptr);
         struct tm* timeinfo = localtime(&now);
-        strftime(mbr_fecha_creacion, sizeof(mbr_fecha_creacion), "%Y-%m-%d %H:%M", timeinfo);
+        strftime(mbr_fecha_creacion, sizeof(mbr_fecha_creacion), "%Y-%m-%d %H%M", timeinfo);
         mbr_dsk_signature  = 0;
         dsk_fit            = 'F';
     }
