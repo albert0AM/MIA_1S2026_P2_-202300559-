@@ -210,13 +210,7 @@ static int openPartition(const std::string& id,
 //  main
 // ─────────────────────────────────────────────────────────────
 int main() {
-    crow::App<crow::CORSHandler> app;
-
-    auto& cors = app.get_middleware<crow::CORSHandler>();
-    cors.global()
-        .headers("Content-Type")
-        .methods("POST"_method, "GET"_method, "OPTIONS"_method)
-        .origin("*");
+    crow::SimpleApp app;
 
     // ── GET / — sirve el frontend ─────────────────────────────
     CROW_ROUTE(app, "/")([]() {
