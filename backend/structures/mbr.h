@@ -29,7 +29,7 @@ struct Partition {
 
 struct MBR {
     int32_t   mbr_tamano;
-    char      mbr_fecha_creacion[16];
+    char      mbr_fecha_creacion[20];
     int32_t   mbr_dsk_signature;
     char      dsk_fit;
     Partition mbr_partitions[4];
