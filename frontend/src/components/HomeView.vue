@@ -127,13 +127,6 @@ function loadFile(e) {
 async function execute() {
   if (!input.value.trim()) return
 
-  const lines = input.value.split('\n')
-  const blocked = lines.filter(l => /^\s*(login|logout)\s*/i.test(l.replace(/#.*/,'')))
-  if (blocked.length > 0) {
-    output.value = 'ERROR: los comandos login y logout se manejan desde los botones de la interfaz gráfica.'
-    return
-  }
-
   loading.value = true
   try {
     const res = await axios.post(`${BASE_URL}/execute`, { commands: input.value })
