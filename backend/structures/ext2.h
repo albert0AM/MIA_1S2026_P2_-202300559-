@@ -52,7 +52,7 @@ struct Inode {
 };
 
 struct Content {
-    char    b_name[12];
+    char    b_name[24];
     int32_t b_inodo;
 
     Content() {
@@ -66,7 +66,7 @@ struct FolderBlock {
 };
 
 struct FileBlock {
-    char b_content[64];
+    char b_content[112];
 
     FileBlock() {
         memset(b_content, 0, sizeof(b_content));

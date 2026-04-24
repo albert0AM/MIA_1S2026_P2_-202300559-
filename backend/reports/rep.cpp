@@ -45,7 +45,7 @@ static int findInDirR(std::fstream& file, const Superblock& sb,
         file.read(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
         for (int j = 0; j < 4; j++) {
             if (fb.b_content[j].b_inodo != -1 &&
-                strncmp(fb.b_content[j].b_name, name, 12) == 0)
+                strncmp(fb.b_content[j].b_name, name, 24) == 0)
                 return fb.b_content[j].b_inodo;
         }
     }
@@ -470,7 +470,7 @@ static void genFolderBlockNode(std::string& dot, int blockIdx, const FolderBlock
     dot += "    <TABLE BORDER='1' CELLBORDER='1' CELLSPACING='0' BGCOLOR='#f0b429' COLOR='#d68910'>\n";
     dot += "    <TR><TD COLSPAN='2' BGCOLOR='#f0b429'><B>Bloque " + std::to_string(blockIdx) + "</B></TD></TR>\n";
     for (int j = 0; j < 4; j++) {
-        std::string nm(fb.b_content[j].b_name, 12);
+        std::string nm(fb.b_content[j].b_name, 24);
         nm = nm.substr(0, nm.find('\0'));
         if (nm.empty()) nm = "--";
         dot += "    <TR><TD PORT='e" + std::to_string(j) + "'>" + nm + "</TD><TD>" + std::to_string(fb.b_content[j].b_inodo) + "</TD></TR>\n";
@@ -540,7 +540,7 @@ static void processInodeTree(std::fstream& file, const Superblock& sb,
             for (int j = 0; j < 4; j++) {
                 int childInode = fb.b_content[j].b_inodo;
                 if (childInode == -1) continue;
-                std::string nm(fb.b_content[j].b_name, 12);
+                std::string nm(fb.b_content[j].b_name, 24);
                 nm = nm.substr(0, nm.find('\0'));
                 if (nm == "." || nm == "..") continue;
 
@@ -571,7 +571,7 @@ static void processInodeTree(std::fstream& file, const Superblock& sb,
                 for (int j = 0; j < 4; j++) {
                     int ci = fb2.b_content[j].b_inodo;
                     if (ci == -1) continue;
-                    std::string nm(fb2.b_content[j].b_name, 12);
+                    std::string nm(fb2.b_content[j].b_name, 24);
                     nm = nm.substr(0, nm.find('\0'));
                     if (nm == "." || nm == "..") continue;
                     dot += "  B" + std::to_string(pb.b_pointers[k]) + ":e" + std::to_string(j) +
@@ -962,7 +962,7 @@ static std::string repLs(const std::string& diskPath,
         file.seekg(sb.s_block_start + rootInode.i_block[b] * sb.s_block_s);
         file.read(reinterpret_cast<char*>(&fb2), sizeof(FolderBlock));
         for (int j = 0; j < 4; j++) {
-            if (strncmp(fb2.b_content[j].b_name, "users.txt", 12) == 0) {
+            if (strncmp(fb2.b_content[j].b_name, "users.txt", 24) == 0) {
                 usersInodeIdx = fb2.b_content[j].b_inodo; break;
             }
         }
@@ -1036,7 +1036,7 @@ static std::string repLs(const std::string& diskPath,
         file.read(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
         for (int j = 0; j < 4; j++) {
             if (fb.b_content[j].b_inodo == -1) continue;
-            std::string nm(fb.b_content[j].b_name, 12);
+            std::string nm(fb.b_content[j].b_name, 24);
             nm = nm.substr(0, nm.find('\0'));
             if (nm == "." || nm == "..") continue;
 

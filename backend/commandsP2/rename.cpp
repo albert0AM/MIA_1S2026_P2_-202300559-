@@ -41,7 +41,7 @@ static int findInDir(std::fstream& file, const Superblock& sb,
         file.read(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
         for (int j = 0; j < 4; j++) {
             if (fb.b_content[j].b_inodo != -1 &&
-                strncmp(fb.b_content[j].b_name, name, 12) == 0)
+                strncmp(fb.b_content[j].b_name, name, 24) == 0)
                 return fb.b_content[j].b_inodo;
         }
     }
@@ -66,9 +66,9 @@ static bool renameEntryInParent(std::fstream& file, const Superblock& sb,
         file.read(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
         for (int j = 0; j < 4; j++) {
             if (fb.b_content[j].b_inodo == targetInodeIdx) {
-                memset(fb.b_content[j].b_name, 0, 12);
+                memset(fb.b_content[j].b_name, 0, 24);
                 memcpy(fb.b_content[j].b_name, newName.c_str(),
-                       std::min((int)newName.size(), 11));
+                       std::min((int)newName.size(), 23));
                 file.seekp(sb.s_block_start + parent.i_block[b] * sb.s_block_s);
                 file.write(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
                 return true;
@@ -127,8 +127,8 @@ std::string cmdRename(const std::map<std::string,std::string>& p) {
         return "ERROR: -path debe iniciar con '/'";
     if (newName.empty())
         return "ERROR: -name no puede estar vacío";
-    if (newName.size() > 11)
-        return "ERROR: -name máximo 11 caracteres";
+    if (newName.size() > 23)
+        return "ERROR: -name máximo 23 caracteres";
 
     // ── Obtener partición activa ──────────────────────────────
     if (mountedPartitions.find(activeSession.partId) == mountedPartitions.end())

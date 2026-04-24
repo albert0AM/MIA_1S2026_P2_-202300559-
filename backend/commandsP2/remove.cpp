@@ -73,7 +73,7 @@ static int findInDir(std::fstream& file, const Superblock& sb,
         file.read(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
         for (int j = 0; j < 4; j++) {
             if (fb.b_content[j].b_inodo != -1 &&
-                strncmp(fb.b_content[j].b_name, name, 12) == 0)
+                strncmp(fb.b_content[j].b_name, name, 24) == 0)
                 return fb.b_content[j].b_inodo;
         }
     }
@@ -91,7 +91,7 @@ static void removeEntryFromParent(std::fstream& file, const Superblock& sb,
         file.read(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
         for (int j = 0; j < 4; j++) {
             if (fb.b_content[j].b_inodo == childInodeIdx) {
-                memset(fb.b_content[j].b_name, 0, 12);
+                memset(fb.b_content[j].b_name, 0, 24);
                 fb.b_content[j].b_inodo = -1;
                 file.seekp(sb.s_block_start + parent.i_block[b] * sb.s_block_s);
                 file.write(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
@@ -134,7 +134,7 @@ static bool removeInode(std::fstream& file, const Superblock& sb,
 
             // Saltar . y ..
             if (strncmp(fb.b_content[j].b_name, ".",  12) == 0) continue;
-            if (strncmp(fb.b_content[j].b_name, "..", 12) == 0) continue;
+            if (strncmp(fb.b_content[j].b_name, "..", 24) == 0) continue;
 
             bool ok = removeInode(file, sb, childIdx, session);
             if (!ok) {

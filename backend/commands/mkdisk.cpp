@@ -1,5 +1,6 @@
 #include "mkdisk.h"
 #include "../structures/mbr.h"
+#include "../structures/globals.h"
 #include "../utils/utils.h"
 
 #include <fstream>
@@ -79,6 +80,17 @@ std::string cmdMkdisk(const std::map<std::string,std::string>& p) {
             return "ERROR: no se pudo escribir el MBR: " + path;
         f.seekp(0);
         f.write(reinterpret_cast<char*>(&mbr), sizeof(MBR));
+    }
+
+    // Limpiar estado de mount para este disco (permite reusar IDs 591A, 592A...)
+    for (auto it = mountedPartitions.begin(); it != mountedPartitions.end(); ) {
+        if (it->second.path == path) it = mountedPartitions.erase(it);
+        else ++it;
+    }
+    if (diskLetter.count(path)) {
+        char letter = diskLetter[path];
+        diskCorrelative.erase(path + ":" + letter);
+        diskLetter.erase(path);
     }
 
     std::string fitStr  = (fit=='B') ? "BF" : (fit=='F') ? "FF" : "WF";

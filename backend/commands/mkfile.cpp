@@ -56,7 +56,7 @@ static int findInDirF(std::fstream& file, const Superblock& sb,
         file.read(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
         for (int j = 0; j < 4; j++) {
             if (fb.b_content[j].b_inodo != -1 &&
-                strncmp(fb.b_content[j].b_name, name, 12) == 0)
+                strncmp(fb.b_content[j].b_name, name, 24) == 0)
                 return fb.b_content[j].b_inodo;
         }
     }
@@ -77,9 +77,9 @@ static bool insertEntry(std::fstream& file, const Superblock& sb,
         file.read(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
         for (int j = 0; j < 4; j++) {
             if (fb.b_content[j].b_inodo == -1) {
-                memset(fb.b_content[j].b_name, 0, 12);
+                memset(fb.b_content[j].b_name, 0, 24);
                 memcpy(fb.b_content[j].b_name, name.c_str(),
-                       std::min((int)name.size(), 11));
+                       std::min((int)name.size(), 23));
                 fb.b_content[j].b_inodo = childInode;
                 file.seekp(sb.s_block_start + parent.i_block[b] * sb.s_block_s);
                 file.write(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
@@ -97,9 +97,9 @@ static bool insertEntry(std::fstream& file, const Superblock& sb,
         memset(&fb, 0, sizeof(FolderBlock));
         for (int j = 0; j < 4; j++) fb.b_content[j].b_inodo = -1;
 
-        memset(fb.b_content[0].b_name, 0, 12);
+        memset(fb.b_content[0].b_name, 0, 24);
         memcpy(fb.b_content[0].b_name, name.c_str(),
-               std::min((int)name.size(), 11));
+               std::min((int)name.size(), 23));
         fb.b_content[0].b_inodo = childInode;
 
         file.seekp(sb.s_block_start + newBlock * sb.s_block_s);

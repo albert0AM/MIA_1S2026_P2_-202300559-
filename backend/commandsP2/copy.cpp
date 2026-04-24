@@ -57,7 +57,7 @@ static int findInDir(std::fstream& file, const Superblock& sb,
         file.read(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
         for (int j = 0; j < 4; j++) {
             if (fb.b_content[j].b_inodo != -1 &&
-                strncmp(fb.b_content[j].b_name, name, 12) == 0)
+                strncmp(fb.b_content[j].b_name, name, 24) == 0)
                 return fb.b_content[j].b_inodo;
         }
     }
@@ -107,9 +107,9 @@ static bool insertInFolder(std::fstream& file, const Superblock& sb,
         file.read(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
         for (int j = 0; j < 4; j++) {
             if (fb.b_content[j].b_inodo == -1) {
-                memset(fb.b_content[j].b_name, 0, 12);
+                memset(fb.b_content[j].b_name, 0, 24);
                 memcpy(fb.b_content[j].b_name, name.c_str(),
-                       std::min((int)name.size(), 11));
+                       std::min((int)name.size(), 23));
                 fb.b_content[j].b_inodo = childInodeIdx;
                 file.seekp(sb.s_block_start + parent.i_block[b] * sb.s_block_s);
                 file.write(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
@@ -125,8 +125,8 @@ static bool insertInFolder(std::fstream& file, const Superblock& sb,
         FolderBlock fb;
         memset(&fb, 0, sizeof(FolderBlock));
         for (int j = 0; j < 4; j++) fb.b_content[j].b_inodo = -1;
-        memset(fb.b_content[0].b_name, 0, 12);
-        memcpy(fb.b_content[0].b_name, name.c_str(), std::min((int)name.size(), 11));
+        memset(fb.b_content[0].b_name, 0, 24);
+        memcpy(fb.b_content[0].b_name, name.c_str(), std::min((int)name.size(), 23));
         fb.b_content[0].b_inodo = childInodeIdx;
         file.seekp(sb.s_block_start + newBlock * sb.s_block_s);
         file.write(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
@@ -270,11 +270,11 @@ static int copyInode(std::fstream& file, const Superblock& sb,
             for (int j = 0; j < 4; j++) {
                 int childIdx = srcFb.b_content[j].b_inodo;
                 if (childIdx == -1) continue;
-                if (strncmp(srcFb.b_content[j].b_name, ".",  12) == 0) continue;
-                if (strncmp(srcFb.b_content[j].b_name, "..", 12) == 0) continue;
+                if (strncmp(srcFb.b_content[j].b_name, ".",  24) == 0) continue;
+                if (strncmp(srcFb.b_content[j].b_name, "..", 24) == 0) continue;
 
                 std::string childName(srcFb.b_content[j].b_name,
-                                      strnlen(srcFb.b_content[j].b_name, 12));
+                                      strnlen(srcFb.b_content[j].b_name, 24));
                 // Si falla por permisos, simplemente se omite ese hijo
                 copyInode(file, sb, childIdx, newInodeIdx, childName, session);
             }

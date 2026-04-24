@@ -55,7 +55,6 @@ static std::string executeScript(const std::string& script) {
 
         auto params = parseCommand(line);
         if (params.find("cmd") == params.end()) {
-            output += "ERROR: línea no reconocida: " + line + "\n";
             continue;
         }
 
@@ -159,7 +158,7 @@ static int navigatePath(std::fstream& file, const Superblock& sb,
             file.read(reinterpret_cast<char*>(&fb), sizeof(FolderBlock));
             for (int j = 0; j < 4; j++) {
                 if (fb.b_content[j].b_inodo != -1 &&
-                    strncmp(fb.b_content[j].b_name, seg.c_str(), 12) == 0) {
+                    strncmp(fb.b_content[j].b_name, seg.c_str(), 24) == 0) {
                     curInode = fb.b_content[j].b_inodo;
                     found = true;
                     break;
@@ -407,7 +406,7 @@ int main() {
                 if (childIdx == -1) continue;
 
                 std::string name(fb.b_content[j].b_name,
-                                 strnlen(fb.b_content[j].b_name, 12));
+                                 strnlen(fb.b_content[j].b_name, 24));
                 if (name == "." || name == "..") continue;
 
                 Inode child;
