@@ -168,21 +168,8 @@ std::string cmdFdisk(const std::map<std::string,std::string>& p) {
         // ════════════════════════════════════════════════════════
         if (hasAdd) {
             int addAmount = std::stoi(p.at("add"));
-
-            // -unit para add (default K)
-            char unit = 'K';
-            if (p.find("unit") != p.end()) {
-                std::string u = toLower(p.at("unit"));
-                if      (u == "b") unit = 'B';
-                else if (u == "k") unit = 'K';
-                else if (u == "m") unit = 'M';
-                else { file.close(); return "ERROR: -unit solo acepta B, K o M"; }
-            }
-
-            int addBytes;
-            if      (unit == 'B') addBytes = addAmount;
-            else if (unit == 'K') addBytes = addAmount * 1024;
-            else                  addBytes = addAmount * 1024 * 1024;
+            // -add siempre trabaja en bytes
+            int addBytes = addAmount;
 
             int currentSize  = mbr.mbr_partitions[slot].part_s;
             int currentStart = mbr.mbr_partitions[slot].part_start;
